@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="StoneTurntable">
+        <attr name="turntable_pointer" format="reference"/>
+        <attr name="turntable_pointer_angle" format="float"/>
+        <attr name="turntable_text_size" format="dimension"/>
+    </declare-styleable>
+</resources>

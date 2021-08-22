@@ -4,12 +4,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context="com.stone.sample.MainActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <com.stone.turntable.lib.TurntableView
+        android:id="@+id/turntable"
+        android:layout_width="300dp"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
+        app:turntable_pointer="@mipmap/pointer"
+        app:turntable_pointer_angle="270"
+        app:turntable_text_size="16sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
