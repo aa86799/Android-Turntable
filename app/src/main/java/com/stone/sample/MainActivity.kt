@@ -18,7 +18,6 @@ class MainActivity : AppCompatActivity() {
         val view = findViewById<TurntableView>(R.id.turntable)
         val textList = listOf("中国", "美国", "新加坡", "泰国", "老挝", "Administrator", "Unbelievable")
         view
-            .setColors(listOf(Color.RED, Color.GRAY, Color.BLUE, Color.MAGENTA))
 //            .setTimeInterpolator(LinearInterpolator())
 //            .setTimeInterpolator(DecelerateInterpolator())
             .setAnimEndDuration(3000L)

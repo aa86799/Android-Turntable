@@ -22,6 +22,7 @@ import java.lang.IllegalStateException
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.random.Random
 
 /**
  * desc:
@@ -194,9 +195,7 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
         }.toFloat()
 
         if (mBackColorList.isEmpty()) {
-            for (i in 0 until mPart) {
-                mBackColorList.add(generateColor(i))
-            }
+            generateColorList()
         }
 
         if (mPathList.size != mPart) {
@@ -311,15 +310,6 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
         mRunFlag = false
     }
 
-    private fun generateColor(index: Int): Int {
-        return when (index % 4) {
-            0 -> resources.getColor(R.color.blue_71f8)
-            1 -> resources.getColor(R.color.teal_200)
-            2 -> resources.getColor(R.color.blue_3ff)
-            else -> resources.getColor(R.color.purple_200)
-        }
-    }
-
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_UP -> {
@@ -411,12 +401,6 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
         return this
     }
 
-    fun setColors(list: List<Int>): TurntableView {
-        mBackColorList.clear()
-        mBackColorList.addAll(list)
-        return this
-    }
-
     fun setAnimEndDuration(duration: Long): TurntableView {
         mAnimEndDuration = duration
         return this
@@ -429,22 +413,47 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
     }
 
     fun setTextList(list: List<String>): TurntableView {
-        if (mBackColorList.isEmpty()) throw IllegalStateException("color list is empty")
-        if (list.size % mBackColorList.size == 1) throw IllegalStateException("TextListSize % ColorListSize == 1")
         mTextList.clear()
         mTextList.addAll(list)
         if (list.size > mBackColorList.size) {
-            val modulus = mBackColorList.size
-            (mBackColorList.size until list.size).forEach {
-                mBackColorList.add(mBackColorList[it % modulus])
+            (mBackColorList.size until list.size).forEach { _ ->
+                mBackColorList.add(getRandomColor())
             }
-
+        } else {
+            (mBackColorList.size - 1 downTo list.size).forEach {
+                mBackColorList.removeAt(it)
+            }
         }
+
         return this
     }
 
     // todo
     fun setDrawableList(list: List<Drawable>): TurntableView {
         return this
+    }
+
+    private fun generateColorList() {
+        mTextList.let {
+            val colorList = mutableListOf<Int>()
+            for (i in it.indices) {
+                colorList.add(getRandomColor())
+            }
+            mBackColorList.clear()
+            mBackColorList.addAll(colorList)
+        }
+    }
+
+    private fun getRandomColor(): Int {
+        val sb = StringBuilder()
+        var temp: String
+        for (i in 0 until 3) {
+            temp = Integer.toHexString(Random.nextInt(0xFF))
+            if (temp.length == 1) {
+                temp = "0$temp"
+            }
+            sb.append(temp)
+        }
+        return Color.parseColor("#$sb")
     }
 }

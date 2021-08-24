@@ -6,16 +6,29 @@
     android:layout_height="match_parent"
     tools:context="com.stone.sample.MainActivity">
 
+    <Button
+        android:id="@+id/btn_edit_turntable"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="button"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+
     <com.stone.turntable.lib.TurntableView
         android:id="@+id/turntable"
-        android:layout_width="300dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:turntable_pointer="@mipmap/pointer"
         app:turntable_pointer_angle="270"
         app:turntable_text_size="16sp"
+        android:layout_marginStart="30dp"
+        android:layout_marginEnd="30dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/btn_edit_turntable"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
