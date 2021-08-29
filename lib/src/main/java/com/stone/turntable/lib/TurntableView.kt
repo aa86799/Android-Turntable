@@ -18,7 +18,6 @@ import androidx.core.view.marginBottom
 import androidx.core.view.marginEnd
 import androidx.core.view.marginStart
 import androidx.core.view.marginTop
-import java.lang.IllegalStateException
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -39,7 +38,7 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
     private val mPaint: Paint = Paint()
     private val mTextPaint: TextPaint
     private var mRadius: Int = 100
-    private var mPart: Int = 1 //等分数
+    private var mPart: Int = 0 //等分数
         set(value) {
             field = value
             mPathList.clear()
@@ -67,6 +66,7 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
     var mTextList: MutableList<String> = mutableListOf()
     var mOnPartClickListener: ((index: Int) -> Unit)? = null
     var mOnRotateEndListener: ((index: Int) -> Unit)? = null
+    var mOnRotateBeginListener: (() -> Unit)? = null
 
     // 属性动画，计算目标旋转角度，并绘制
     private val mAnim by lazy {
@@ -83,7 +83,6 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
             } else {
                 // 非touch，正常停止
                 if (it.duration * it.animatedFraction >= mAnimEndDuration) {
-
                     it.cancel()
                     return@addUpdateListener
                 }
@@ -96,12 +95,16 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
             mRunFlag = false
             mTouchToEndStartTime = 0L
             mAngle %= 360
-            mOnRotateEndListener?.invoke(getPointerPart())
+            val partEndResult = getPointerPart()
+            if (partEndResult != -1) {
+                mOnRotateEndListener?.invoke(partEndResult)
+            }
         }
         anim
     }
 
     init {
+        setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         mPaint.isAntiAlias = true // 设置画笔无锯齿
         mPaint.strokeWidth = 6f
         mPaint.strokeCap = Paint.Cap.ROUND
@@ -121,9 +124,11 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
                 resources.displayMetrics
             )
             val array = context.obtainStyledAttributes(attrs, R.styleable.StoneTurntable)
-            mPointerBitmap = array.getDrawable(R.styleable.StoneTurntable_turntable_pointer)?.toBitmap()
+            mPointerBitmap =
+                array.getDrawable(R.styleable.StoneTurntable_turntable_pointer)?.toBitmap()
             mPointAngle = array.getFloat(R.styleable.StoneTurntable_turntable_pointer_angle, 270f)
-            mTextSize = array.getDimensionPixelSize(R.styleable.StoneTurntable_turntable_text_size, 14)
+            mTextSize =
+                array.getDimensionPixelSize(R.styleable.StoneTurntable_turntable_text_size, 14)
             array.recycle()
         }
 
@@ -198,21 +203,25 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
             generateColorList()
         }
 
-        if (mPathList.size != mPart) {
-            mPathList.forEach { it.reset() }
-            for (i in mPathList.size - 1 until mPart) {
+        if (mPathList.isEmpty()) {
+            for (i in 0 until mPart) {
                 mPathList.add(Path())
             }
         } else {
+            for (i in mPathList.size - 1 until (mPart - mPathList.size)) {
+                mPathList.add(Path())
+            }
             mPathList.forEach { it.reset() }
         }
 
-        if (mTextPathList.size != mPart) {
-            mTextPathList.forEach { it.reset() }
-            for (i in mTextPathList.size - 1 until mPart) {
+        if (mTextPathList.isEmpty()) {
+            for (i in 0 until mPart) {
                 mTextPathList.add(Path())
             }
         } else {
+            for (i in mTextPathList.size - 1 until (mPart - mTextPathList.size)) {
+                mTextPathList.add(Path())
+            }
             mTextPathList.forEach { it.reset() }
         }
 
@@ -229,7 +238,18 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
             (2 * mRadius).toFloat()
         )
 
+        drawWArcAndText(canvas)
+
+        // 绘制控制按钮
+        mPointerBitmap?.run {
+            canvas.drawBitmap(this, null, mBitmapOutRectF, null)
+        }
+    }
+
+
+    private fun drawWArcAndText(canvas: Canvas) {
         for (i in 0 until mPart) {
+            if (i >= mPathList.size) return
             /* 使用 path等分圆，绘制扇形。 方便后续判断 点击的 part index. */
             mPathList[i].reset()
             mPaint.color = mBackColorList[i]
@@ -266,41 +286,58 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
                 }
             }
             val text = mTextList[i]
-            var textLength = mTextPaint.measureText(mTextList[i])
-            var end = 1
             val offset = mRadius / 5f
             // 弧长公式：圆心角度数 * PI * 半径 / 180
             val arcLength =
                 ((if (i != mPart - 1) mNormalAngle else mSpecialAngle) * Math.PI * (mRadius - offset) / 180).toFloat()
-            val maxLength = arcLength - offset // 允许的文本最大length
-            // 计算, 得出 在 maxLength 附近的 end 值 (对应text的下标位置)
-            if (textLength > maxLength) {
-                do {
-                    textLength = mTextPaint.measureText(text.substring(0, end))
-                    end++
-                } while (textLength < maxLength && end <= text.length)
-            } else {
-                end = text.length
-            }
+            val calcText = calculateText(text, offset, arcLength)
+
             mTextPaint.color = Color.WHITE
+            /*
+             * 当只有一个数据，会绘制圆，若还是使 旋转角度增加，
+             * 可能会造成无法绘制出文本的情况(比如 path 的 startAngle=[65f 或 258f])；
+             * 因此 使用 上下左右 四个点作为 path 的 startAngle
+             */
+            val tempTextPath = if (mTextList.size == 1) {
+                Path().apply {
+                    addArc(
+                        mOutRectF, 90f * Random.nextInt(4), mNormalAngle
+                    )
+                }
+            } else {
+                mTextPathList[i]
+            }
             canvas.drawTextOnPath(
-                text.substring(0, if (end > text.length) text.length else end),
-                mTextPathList[i],
+                calcText,
+                tempTextPath, //mTextPathList[i],
                 0f,
                 offset,
                 mTextPaint
             )
         }
+    }
 
-        // 绘制控制按钮
-        mPointerBitmap?.run {
-            canvas.drawBitmap(this, null, mBitmapOutRectF, null)
+    private fun calculateText(text: String, offset: Float, arcLength: Float): String {
+        var textLength = mTextPaint.measureText(text)
+        var end = 1
+        val maxLength = arcLength - offset // 允许的文本最大length
+        // 计算, 得出 在 maxLength 附近的 end 值 (对应text的下标位置)
+        if (textLength > maxLength) {
+            do {
+                textLength = mTextPaint.measureText(text.substring(0, end))
+                end++
+            } while (textLength < maxLength && end <= text.length)
+        } else {
+            end = text.length
         }
+        return text.substring(0, if (end > text.length) text.length else end)
     }
 
     private fun startRotate() {
-        if (mRunFlag) return
+        if (mRunFlag /*|| mPathList.size == 1*/) return
         mRunFlag = true
+        mOnRotateBeginListener?.invoke()
+
         mAnim.start()
     }
 
@@ -378,6 +415,10 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
      * 当旋转后，重新计算 left值，超360，需要 % 。
      */
     private fun getPointerPart(): Int {
+        if (mPathList.size == 1) {
+            // 若不加判断，可能返回-1
+            return 0
+        }
         mPathList.forEachIndexed { index, _ ->
             if (index != mPart - 1) {
                 val left = (mAngle + mNormalAngle * index) % 360
