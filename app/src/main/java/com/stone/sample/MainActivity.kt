@@ -1,12 +1,9 @@
 package com.stone.sample
 
 import android.app.AlertDialog
-import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.animation.DecelerateInterpolator
-import android.view.animation.LinearInterpolator
-import androidx.core.content.ContentProviderCompat.requireContext
+import android.view.MotionEvent
 import com.stone.turntable.R
 import com.stone.turntable.lib.TurntableView
 
@@ -16,9 +13,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         val view = findViewById<TurntableView>(R.id.turntable)
-//        val textList = listOf("中国", "美国", "新加坡", "泰国", "老挝", "Administrator", "Unbelievable")
+        val textList = listOf("中国", "美国", "新加坡", "泰国", "老挝", "Administrator", "Unbelievable")
 
-        val textList = listOf("中国")
+//        val textList = listOf("中国")
 
         view
 //            .setTimeInterpolator(LinearInterpolator())
@@ -37,4 +34,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        when (event?.action) {
+            MotionEvent.ACTION_UP -> {
+                findViewById<TurntableView>(R.id.turntable).resetHighlightStatus()
+                return true
+            }
+        }
+        return super.onTouchEvent(event)
+    }
 }

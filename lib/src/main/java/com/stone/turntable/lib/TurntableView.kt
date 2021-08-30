@@ -12,6 +12,7 @@ import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
+import androidx.core.animation.doOnCancel
 import androidx.core.animation.doOnEnd
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.marginBottom
@@ -63,6 +64,9 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
     private var mPointerBitmap: Bitmap? = null // 指针图片
     private val mBitmapOutRectF = RectF() // 圆心控制图 的外矩形
     private var mInterpolator: TimeInterpolator = AccelerateDecelerateInterpolator() // 插值器，先加速再减速
+    private var mIsSelectPartHighlight: Boolean = true // 选中部分高亮，其它部分 半透明
+    private var mIsSelectPartHighlightSwitch: Boolean = true // 开关
+    private var mSelectPathIndex: Int = -1
     var mTextList: MutableList<String> = mutableListOf()
     var mOnPartClickListener: ((index: Int) -> Unit)? = null
     var mOnRotateEndListener: ((index: Int) -> Unit)? = null
@@ -75,7 +79,7 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
         anim.interpolator = mInterpolator
         anim.addUpdateListener {
             if (!mRunFlag) {
-                // 手动touch后，延时停止
+                // 手动touch 停止， 当前时间与touch时间 超出后，停止
                 if (System.currentTimeMillis() - mTouchToEndStartTime >= mTouchToEndDelay) {
                     it.cancel()
                     return@addUpdateListener
@@ -99,6 +103,17 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
             if (partEndResult != -1) {
                 mOnRotateEndListener?.invoke(partEndResult)
             }
+
+            if (!mIsSelectPartHighlightSwitch) return@doOnEnd
+            // 若选中区需要高亮
+            if (partEndResult != -1 && mBackColorList.size > 1) {
+                mIsSelectPartHighlight = true
+                mSelectPathIndex = partEndResult
+                invalidate()
+            }
+        }
+        // anim.cancel() 后，会执行 onCancel，接着还是会执行 onEnd
+        anim.doOnCancel {
         }
         anim
     }
@@ -197,10 +212,6 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
         } else {
             mNormalAngle + 360 % mPart
         }.toFloat()
-
-        if (mBackColorList.isEmpty()) {
-            generateColorList()
-        }
 
         if (mPathList.isEmpty()) {
             for (i in 0 until mPart) {
@@ -314,6 +325,14 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
                 mTextPaint
             )
         }
+
+        //高亮开关没开 || 运行中 || 不需要高亮(高亮状态在动画结束时置true) || 选中部分的 index == -1
+        if (!mIsSelectPartHighlightSwitch || mRunFlag || !mIsSelectPartHighlight || mSelectPathIndex == -1) return
+        for (i in 0 until mPathList.size) {
+            if (mSelectPathIndex == i) continue
+            mPaint.color = Color.parseColor("#BFFFFFFF") // 白色 透明度75%
+            canvas.drawPath(mPathList[i], mPaint) // 绘制扇形 path，
+        }
     }
 
     private fun calculateText(text: String, offset: Float, arcLength: Float): String {
@@ -337,6 +356,7 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
         mRunFlag = true
         mOnRotateBeginListener?.invoke()
 
+        mIsSelectPartHighlight = false // 开始旋转动画时，不高亮
         mAnim.start()
     }
 
@@ -364,6 +384,8 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
                     val partIndex = getTouchPointPart(event.x, event.y)
                     if (partIndex != -1) {
                         mOnPartClickListener?.invoke(partIndex)
+                    } else {
+                        resetHighlightStatus()
                     }
                 }
             }
@@ -469,20 +491,29 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
         return this
     }
 
+    fun setIsSelectPartHighlightSwitch(isSelectPartHighlight: Boolean) {
+        mIsSelectPartHighlightSwitch = isSelectPartHighlight
+    }
+
+    fun resetHighlightStatus() {
+        if (mIsSelectPartHighlightSwitch) {
+            mIsSelectPartHighlight = false
+            invalidate()
+        }
+    }
+
     // todo
     fun setDrawableList(list: List<Drawable>): TurntableView {
         return this
     }
 
-    private fun generateColorList() {
-        mTextList.let {
-            val colorList = mutableListOf<Int>()
-            for (i in it.indices) {
-                colorList.add(getRandomColor())
-            }
-            mBackColorList.clear()
-            mBackColorList.addAll(colorList)
-        }
+    // 生成 color 是否要半透明
+    private fun generateColor(color: Int, isTranslucent: Boolean): Int {
+//        val a = (color shr 24) and 0xff
+        val r = (color shr 16) and 0xff
+        val g = (color shr 8) and 0xff
+        val b = color and 0xff
+        return Color.argb(if (isTranslucent) 128 else 255, r, g, b)
     }
 
     private fun getRandomColor(): Int {
@@ -495,6 +526,6 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
             }
             sb.append(temp)
         }
-        return Color.parseColor("#$sb")
+        return Color.parseColor("#FF$sb") // argb
     }
 }
