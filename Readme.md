@@ -6,7 +6,7 @@ repositories {
     mavenCentral()
 }
 
-implementation 'io.github.aa86799:Android-Turntable:1.0.2'
+implementation 'io.github.aa86799:Android-Turntable:1.0.3'
 
  <com.stone.turntable.lib.TurntableView
     android:id="@+id/turntable"

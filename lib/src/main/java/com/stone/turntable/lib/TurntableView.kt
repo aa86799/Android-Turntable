@@ -189,7 +189,6 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
 
     // 绘制转盘、扇形格、文本、控制按钮
     override fun onDraw(canvas: Canvas) {
-        mPart = mTextList.size
         if (mPart == 0) return
 
         mNormalAngle = (360 / mPart).toFloat()
@@ -208,7 +207,7 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
                 mPathList.add(Path())
             }
         } else {
-            for (i in mPathList.size - 1 until (mPart - mPathList.size)) {
+            for (i in 0 until (mPart - mPathList.size)) {
                 mPathList.add(Path())
             }
             mPathList.forEach { it.reset() }
@@ -219,7 +218,7 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
                 mTextPathList.add(Path())
             }
         } else {
-            for (i in mTextPathList.size - 1 until (mPart - mTextPathList.size)) {
+            for (i in 0 until (mPart - mTextPathList.size)) {
                 mTextPathList.add(Path())
             }
             mTextPathList.forEach { it.reset() }
@@ -466,6 +465,7 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
             }
         }
 
+        mPart = mTextList.size
         return this
     }
 
