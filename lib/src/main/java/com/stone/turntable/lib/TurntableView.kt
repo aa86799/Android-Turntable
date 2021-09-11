@@ -84,15 +84,31 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
                     it.cancel()
                     return@addUpdateListener
                 }
+                // 时间周期过半后，减速。 这里的过半不是很准确，未计算 animatedFraction 在总用时中的比例；总用时是动态的
+                val angle = if (it.animatedFraction > 0.5f) {
+                    30 * (1 - it.animatedFraction)
+                } else {
+                    80 * it.animatedFraction
+                }
+                mAngle += angle
             } else {
                 // 非touch，正常停止
                 if (it.duration * it.animatedFraction >= mAnimEndDuration) {
                     it.cancel()
                     return@addUpdateListener
                 }
+                // 时间周期过半后，减速
+                val curRatio = mAnimEndDuration/anim.duration.toFloat()
+                val limitRatio = curRatio * 0.5f
+                val angle = if (it.animatedFraction > limitRatio) {
+                    30 * (curRatio - it.animatedFraction)
+                } else {
+                    80 * it.animatedFraction
+                }
+                mAngle += angle
             }
-            mAngle += it.animatedValue as Float
-            Thread.sleep((50 * it.animatedFraction).toLong())
+
+            Thread.sleep(50 * it.animatedFraction.toLong())
             invalidate()
         }
         anim.doOnEnd {
