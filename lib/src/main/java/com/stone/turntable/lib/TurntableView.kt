@@ -474,6 +474,13 @@ class TurntableView constructor(context: Context, attrs: AttributeSet?, defStyle
         return this
     }
 
+
+    fun setColorList(list: List<Int>) {
+        mBackColorList.clear()
+        mBackColorList.addAll(list)
+    }
+
+    // 设置文本。若背景色list数量不足，会创建随机颜色；若多余，会移除
     fun setTextList(list: List<String>): TurntableView {
         mTextList.clear()
         mTextList.addAll(list)

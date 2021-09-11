@@ -29,9 +29,30 @@ class MainActivity : AppCompatActivity() {
         view.mOnPartClickListener = {
             AlertDialog.Builder(this).setMessage(textList[it]).create().show()
         }
+        view.setColorList(generateColorList(textList.size))
         view.post {
             view.drawingTurntable()
         }
+    }
+
+    private fun generateColorList(size: Int): MutableList<Int> {
+        val list = listOf(
+            getColorByRes(R.color.purple_200),
+            getColorByRes(R.color.purple_500),
+            getColorByRes(R.color.purple_700)
+        )
+        val result = mutableListOf<Int>()
+        (0 until size).forEach {
+            result.add(list[it % list.size])
+        }
+        if (size > 1 && size % list.size == 1) {
+            result[result.lastIndex] = list[1]
+        }
+        return result
+    }
+
+    private fun getColorByRes(colorRes: Int): Int {
+        return resources.getColor(colorRes)
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
